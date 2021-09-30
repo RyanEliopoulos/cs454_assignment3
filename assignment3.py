@@ -92,11 +92,25 @@ class Ranking(object):
         relevant_urls: int = self._rel(query_line, thresh)
         return relevant_urls / total_rel
 
+    def f1_score(self, query_line: int, thresh: int) -> float:
+        alpha: float = .5
+
+        prec: float = self.prec(query_line, thresh)
+        recall: float = self.recall(query_line, thresh)
+        den1: float = alpha / prec   # First denominator term
+        den2: float = (1 - alpha) / recall  # Second denominator term
+
+        f1: float = 1 / (den1 + den2)
+        return f1
+
 
 if __name__ == '__main__':
 
     rnk = Ranking('./judge.txt')
-    ret = rnk.prec(1, 1)
+    threshold = 1
+    ret = rnk.prec(1, threshold)
     print(ret)
-    ret = rnk.recall(1, 2)
+    ret = rnk.recall(1, threshold)
+    print(ret)
+    ret = rnk.f1_score(1, threshold)
     print(ret)
