@@ -56,6 +56,18 @@ class Ranking(object):
                 self.sample_lines[line_count] = {'query': query, 'urls': urls}
                 line_count += 1
 
+    def _rel(self, query_line: int, thresh: int) -> int:
+        # Pulling out required info
+        query_deets: dict = self.sample_lines[query_line]
+        query: str = query_deets['query']
+        judgements: dict = self.judged_urls[query]
+        returned_urls: list = query_deets['urls']
+        relevant_urls: int = 0
+        for url in returned_urls:
+            if url in judgements and int(judgements[url]) >= thresh:
+                relevant_urls += 1
+        return relevant_urls
+
     def prec(self, query_line: int, thresh: int) -> float:
         """
             rel/k
@@ -64,21 +76,27 @@ class Ranking(object):
 
             Assumes k is always 10
         """
-        query_deets: dict = self.sample_lines[query_line]
-        query: str = query_deets['query']
-        judgements: dict = self.judged_urls[query]
-        returned_urls: list = query_deets['urls']
-        # Tallying relevant urls
-        relevant_urls: int = 0
-        for url in returned_urls:
-            if url in judgements and int(judgements[url]) >= thresh:
-                relevant_urls += 1
+        # Calculating score
+        relevant_urls: int = self._rel(query_line, thresh)
         k: int = 10
         return relevant_urls / k
+
+    def recall(self, query_line: int, thresh: int) -> float:
+        """ relevant urls returned / relevant urls in the dataset"""
+        query: str = self.sample_lines[query_line]['query']
+        judged_urls: dict = self.judged_urls[query]
+        total_rel: int = 0
+        for url in judged_urls.keys():
+            if int(judged_urls[url]) >= thresh:
+                total_rel += 1
+        relevant_urls: int = self._rel(query_line, thresh)
+        return relevant_urls / total_rel
 
 
 if __name__ == '__main__':
 
     rnk = Ranking('./judge.txt')
-    ret = rnk.prec(1, 3)
+    ret = rnk.prec(1, 1)
+    print(ret)
+    ret = rnk.recall(1, 2)
     print(ret)
