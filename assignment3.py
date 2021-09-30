@@ -90,27 +90,61 @@ class Ranking(object):
             if int(judged_urls[url]) >= thresh:
                 total_rel += 1
         relevant_urls: int = self._rel(query_line, thresh)
+        if total_rel == 0:
+            return 0
         return relevant_urls / total_rel
 
     def f1_score(self, query_line: int, thresh: int) -> float:
-        alpha: float = .5
+        """
+            1 / ((alpha/prec) + (1-alpha)/recall)
+            Assumes alpha to be .5
+        """
 
+        alpha: float = .5
         prec: float = self.prec(query_line, thresh)
         recall: float = self.recall(query_line, thresh)
-        den1: float = alpha / prec   # First denominator term
-        den2: float = (1 - alpha) / recall  # Second denominator term
-
-        f1: float = 1 / (den1 + den2)
+        # den1 - first denominator term
+        den1: float
+        if prec == 0:
+            den1 = 0
+        else:
+            den1 = alpha / prec
+        # den2 - second denominator term
+        den2: float
+        if recall == 0:
+            den2 = 0
+        else:
+            den2 = (1 - alpha) / recall
+        # f1
+        f1: float
+        if den1 == 0 or den2 == 0:
+            return 0
+        else:
+            f1: float = 1 / (den1 + den2)
         return f1
+
+    def rr_score(self, query_line: int, thresh: int) -> float:
+        # Pulling out required info
+        query_deets: dict = self.sample_lines[query_line]
+        query: str = query_deets['query']
+        judgements: dict = self.judged_urls[query]
+        returned_urls: list = query_deets['urls']
+        for i, url in enumerate(returned_urls):
+            if url in judgements and int(judgements[url]) >= thresh:
+                return 1 / (i + 1)
+        # @TODO what if no relevant URLS exist? Seems 0
+        return 0
 
 
 if __name__ == '__main__':
 
     rnk = Ranking('./judge.txt')
-    threshold = 1
+    threshold = 2
     ret = rnk.prec(1, threshold)
     print(ret)
     ret = rnk.recall(1, threshold)
     print(ret)
     ret = rnk.f1_score(1, threshold)
+    print(ret)
+    ret = rnk.rr_score(1, threshold)
     print(ret)
