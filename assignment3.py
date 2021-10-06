@@ -124,6 +124,12 @@ class Ranking(object):
         return f1
 
     def rr_score(self, query_line: int, thresh: int) -> float:
+        """
+            1/ pos_r     pos_r being the position of the first relevant URL
+        :param query_line:
+        :param thresh:
+        :return:
+        """
         # Pulling out required info
         query_deets: dict = self.sample_lines[query_line]
         query: str = query_deets['query']
@@ -135,16 +141,43 @@ class Ranking(object):
         # @TODO what if no relevant URLS exist? Seems 0
         return 0
 
+    def _dcg(self, judgements: dict, returned_urls: list) -> float:
+        sum: float = 0
+        for i, url in enumerate(returned_urls):
+            if url in judgements:
+                rel_i: int = int(judgements[url])
+                denom: float = math.log(((i+1) + 1), 2)  # extra +1 to account for zero indexing
+                sum += rel_i / denom
+        return sum
 
-if __name__ == '__main__':
+    def _idcg(self, judgements: dict, returned_urls: list) -> float:
+        """ Calls _dcg after ordering top urls """
 
-    rnk = Ranking('./judge.txt')
-    threshold = 2
-    ret = rnk.prec(1, threshold)
-    print(ret)
-    ret = rnk.recall(1, threshold)
-    print(ret)
-    ret = rnk.f1_score(1, threshold)
-    print(ret)
-    ret = rnk.rr_score(1, threshold)
-    print(ret)
+        # Building list of top-10 scoring urls
+        score_pairs: list = []  # list of tuples. (<judgement>, <url>)
+        for url in judgements:
+            tup: tuple = (judgements[url], url)
+            score_pairs.append(tup)
+        score_pairs.sort(key=lambda val: int(val[0]))
+        score_pairs.reverse()
+        # Building url-only list for _dcg consumption
+        score_pairs = score_pairs[:10]  # Pruning unneeded values
+        urls_only: list = [pair[1] for pair in score_pairs]
+        return self._dcg(judgements, urls_only)
+
+    def ndcg(self, query_line: int) -> float:
+        """
+            dcg / idcg
+        """
+        # Pulling out required info
+        query_deets: dict = self.sample_lines[query_line]
+        query: str = query_deets['query']
+        judgements: dict = self.judged_urls[query]
+        returned_urls: list = query_deets['urls']
+        # Calculating value
+        dcg: float = self._dcg(judgements, returned_urls)
+        idcg: float = self._idcg(judgements, returned_urls)
+        return dcg / idcg
+
+
+
